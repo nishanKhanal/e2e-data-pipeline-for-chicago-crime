@@ -20,7 +20,7 @@ def impute_community_area(df):
         logging.info(f"{missing_count} rows missing community_area. Performing spatial join...")
 
         # Load community area boundaries
-        base_data_path = Path("../data")
+        base_data_path = Path("./data")
         community_areas_file_name = "CommAreas_20250412.geojson"
 
         community_areas = gpd.read_file(base_data_path / community_areas_file_name)
@@ -29,20 +29,53 @@ def impute_community_area(df):
         community_areas['area_id'] = community_areas['area_id'].astype(int)
 
         # Convert to GeoDataFrame using X/Y coordinate
-        gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df['x_coordinate'], df['y_coordinate']))
-        gdf = gdf.set_crs("EPSG:3435")
+        logging.info("Converting DataFrame to GeoDataFrame...")
+        df = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df['x_coordinate'], df['y_coordinate']))
+        df = df.set_crs("EPSG:3435")
 
         # Perform spatial join
-        joined = gpd.sjoin(gdf, community_areas, how="left", predicate='within')
+        logging.info("Performing spatial join...")
+        df = gpd.sjoin(df, community_areas, how="left", predicate='within')[df.columns.to_list() + ['area_id']]
 
         # Fill in missing community_area from spatial area_id
-        imputed_values = joined['area_id'].notna() & df['community_area'].isna()
-        df['community_area'] = df['community_area'].fillna(joined['area_id'])
+        imputed_values = df['area_id'].notna() & df['community_area'].isna()
+        logging.info(f"Filling missing community_area with area_id from community area boundaries dataset")
+        df['community_area'] = df['community_area'].fillna(df['area_id'])
+
+        df = pd.DataFrame(df.drop(columns=['geometry', 'area_id']))
 
         logging.info(f"Imputed community_area for {imputed_values.sum()} rows.")
     except Exception as e:
         logging.error("Error during spatial imputation.", exc_info=True)
-        raise RuntimeError("Spatial imputation failed.") from e
+        raise RuntimeError("Spatial imputation failed.")
+
+    return df
+
+
+def rename_columns(df):
+    df.rename(columns={
+        'ID': 'id',
+        'Case Number': 'case_number',
+        'Date': 'date',
+        'Block': 'block',
+        'IUCR': 'iucr',
+        'Primary Type': 'primary_type',
+        'Description': 'description',
+        'Location Description': 'location_description',
+        'Arrest': 'arrest',
+        'Domestic': 'domestic',
+        'Beat': 'beat',
+        'District': 'district',
+        'Ward': 'ward',
+        'Community Area': 'community_area',
+        'FBI Code': 'fbi_code',
+        'X Coordinate': 'x_coordinate',
+        'Y Coordinate': 'y_coordinate',
+        'Updated On': 'updated_on',
+        'Year': 'year',
+        'Latitude': 'latitude',
+        'Longitude': 'longitude',
+    }, inplace=True)
 
     return df
 
@@ -87,8 +120,9 @@ def cast_column_types(
 
 def clean_string_columns(df, string_cols):
     for col in string_cols:
-        df[col] = df[col].str.strip().str.replace(r'\s+', ' ', regex=True).str.upper()
-
+        df[col] = df[col].str.strip().str.upper().str.replace(r'\s+', ' ', regex=True)
+        
+    logging.info(f"Cleaned string columns: {string_cols}")
     return df
 
 

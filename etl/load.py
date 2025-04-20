@@ -5,6 +5,8 @@ import psycopg2
 from psycopg2.extras import execute_values
 
 def get_existing_ids(df, conn, table_name="crimes"):
+
+    # TODO: Rewrite this function to handle the case when len(df) ~ millions of rows
     cur = conn.cursor()
     ids = tuple(df["id"].unique().tolist())
     if not ids:
@@ -25,6 +27,7 @@ def chunk_dataframe(df, batch_size):
 
 def prepare_for_postgres_insertion(df):
     """ Prepares DataFrame for psycopg2 insertion (convert pd.NA, NaN to None)."""
+    # TODO: Make this function more efficient for large DataFrames
     return df.astype(object).where(pd.notnull(df), None)
 
 def load(df, db_config, table_name="crimes", batch_size=50000):
@@ -36,6 +39,7 @@ def load(df, db_config, table_name="crimes", batch_size=50000):
         logging.warning("No records to load. DataFrame is empty.")
         return
 
+    logging.info(f"Loading {len(df)} records into '{table_name}' table.")
     try:
         conn = psycopg2.connect(**db_config)
         cur = conn.cursor()

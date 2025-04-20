@@ -27,7 +27,7 @@ def extract(
         conn = psycopg2.connect(**db_config)
         cur = conn.cursor()
         cur.execute("SELECT MAX(updated_on) FROM crimes;")
-        latest_updated = cur.fetchone()[0]
+        latest_updated = cur.fetchone()[0] or datetime(2025, 4, 2)
         formatted_time = latest_updated.isoformat()
         cur.close()
         conn.close()
