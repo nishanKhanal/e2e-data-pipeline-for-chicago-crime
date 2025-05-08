@@ -20,10 +20,12 @@ def impute_community_area(df):
         logging.info(f"{missing_count} rows missing community_area. Performing spatial join...")
 
         # Load community area boundaries
-        base_data_path = Path("./data")
+        # base_data_path = Path("./data").resolve()
+        base_data_path = Path(__file__).parent.parent
         community_areas_file_name = "CommAreas_20250412.geojson"
+        logging.info(f"{base_data_path / 'data' / community_areas_file_name}")
 
-        community_areas = gpd.read_file(base_data_path / community_areas_file_name)
+        community_areas = gpd.read_file(base_data_path / "data" / community_areas_file_name)
         community_areas = community_areas.to_crs('EPSG:3435')
         community_areas.rename({'area_num_1': 'area_id'}, axis=1, inplace=True)
         community_areas['area_id'] = community_areas['area_id'].astype(int)
